@@ -1,0 +1,200 @@
+<template>
+	<div class="">
+		<header
+			class="sticky top-0 z-10 flex items-center justify-between border-b bg-white px-3 py-2.5 sm:px-5"
+		>
+			<Breadcrumbs class="h-7" :items="breadcrumbs" />
+			<Button variant="solid" @click="saveRequirements()">
+				{{ __('Save') }}
+			</Button>
+		</header>
+		<div class="w-1/2 mx-auto py-5">
+			<div class="">
+				<div class="text-lg font-semibold mb-4">
+					{{ __('Material requirement') }}
+				</div>
+				<div class="grid grid-cols-2 gap-10 mb-4">
+					<div>
+						<FormControl
+							v-model="requirements.user"
+							:label="__('User')"
+							class="mb-4"
+						/>
+						<FormControl
+							v-model="requirements.user_type"
+							:label="__('User Type')"
+							class="mb-4"
+						/>
+						<FormControl
+							v-model="requirements.customer"
+							:label="__('Customer')"
+							class="mb-4"
+						/>
+						<FormControl
+							v-model="requirements.branch"
+							:label="__('Branch')"
+							class="mb-4"
+						/>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</template>
+<script setup>
+    import {
+	computed,
+	onMounted,
+	inject,
+	reactive,
+	onBeforeUnmount,
+	ref,
+} from 'vue'
+import {
+	Breadcrumbs,
+	FormControl,
+	FileUploader,
+	Button,
+	TextEditor,
+	createResource,
+} from 'frappe-ui'
+import Link from '@/components/Controls/Link.vue'
+import MultiSelect from '@/components/Controls/MultiSelect.vue'
+import { useRouter } from 'vue-router'
+import { getFileSize, showToast } from '../utils'
+import { X, FileText } from 'lucide-vue-next'
+const router = useRouter()
+const user = inject('$user')
+const props = defineProps({
+	materialrequirementName: {
+		type: String,
+		required: true,
+	},
+})
+const materialrequirement = reactive({
+    user: '',
+	user_type: '',
+	customer: '',
+	branch: '',
+})
+
+onMounted(() => {
+	if (!user.data) window.location.href = '/login'
+	if (props.materialrequirementName != 'new') {
+		materialrequirementDetail.reload()
+	}
+	window.addEventListener('keydown', keyboardShortcut)
+})
+const keyboardShortcut = (e) => {
+	if (
+		e.key === 's' &&
+		(e.ctrlKey || e.metaKey) &&
+		!e.target.classList.contains('ProseMirror')
+	) {
+		saveMaterialRequirement()
+		e.preventDefault()
+	}
+}
+const newMaterialRequirement = createResource({
+	url: 'frappe.client.insert',
+	makeParams(values) {
+		return {
+			doc: {
+				doctype: 'Material Requirement',
+				...materialrequirement, 
+			},
+		}
+	},
+})
+const materialrequirementDetail = createResource({
+	url: 'frappe.client.get',
+	makeParams(values) {
+		return {
+			doctype: 'Material Requirement',
+			name: props.materialrequirementName,
+		};
+	},
+	onSuccess(data) {
+		Object.keys(data).forEach((key) => {
+			// Directly update the fields in the materialRequirement object with the data fetched
+			if (Object.hasOwn(materialRequirement, key)) {
+				materialRequirement[key] = data[key];
+			}
+		});
+	},
+});
+const editMaterialrequirement = createResource({
+    url: 'frappe.client.set_value',
+    makeParams(values) {
+        return {
+            doctype: 'Material Requirement',
+            name: props.materialrequirementName,
+            fieldname: {
+                ...materialrequirement,
+            },
+        };
+    },
+});
+const createNewMaterialRequirement = () => {
+	newMaterialrequirement.submit(
+		{},
+		{
+			onSuccess(data) {
+				router.push({
+					name: 'MaterialRequirement',
+					params: {
+						MaterialrequirementName: data.name,
+					},
+				})
+			},
+			onError(err) {
+				showToast('Error', err.messages?.[0] || err, 'x')
+			},
+		}
+	)
+}
+const editmaterialrequirement = () => {
+	editmaterialrequirement.submit(
+		{},
+		{
+			onSuccess(data) {
+				router.push({
+					name: 'materialrequirementDetail',
+					params: {
+						materialrequirementName: data.name,
+					},
+				})
+			},
+			onError(err) {
+				showToast('Error', err.messages?.[0] || err, 'x')
+			},
+		}
+	)
+}
+const breadcrumbs = computed(() => {
+	let crumbs = [
+		{
+			label: 'Material Requirement',
+			route: {
+				name: 'Material Requirement',
+			},
+		},
+	]
+	if (materialrequirementDetail.data) {
+		crumbs.push({
+			label:materialrequirementDetail.data.title,
+			route: {
+				name: 'MaterialrequirementDetail',
+				params: {
+					materialrequirementName: props.materialrequirementName,
+				},
+			},
+		})
+	}
+	crumbs.push({
+		label: props.materialrequirementName == 'new' ? 'New materialRequirement' : 'Edit materialrequirement',
+		route: { name: 'materialrequirementCreation', params: { materialrequirementName: props.materialrequirementName } },
+	})
+	return crumbs
+})
+</script>

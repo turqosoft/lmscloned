@@ -1,2 +1,7 @@
-# lmscloned
-LMS Cloned app for Horti
+## Lmscloned
+
+lmscloned
+
+#### License
+
+mit
